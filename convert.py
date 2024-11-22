@@ -1,8 +1,28 @@
 """Script to fetch and convert bot IP ranges from various sources to CSV format."""
 
 import csv
+import ipaddress
 from typing import List, Tuple
 import requests
+
+def convert_ipv6_to_cidr(ip: str) -> str:
+    """Convert an IPv6 address to /64 CIDR notation if it's not already a CIDR."""
+    try:
+        # If it's already a network with prefix length, return as is
+        if '/' in ip:
+            network = ipaddress.ip_network(ip, strict=False)
+            return str(network)
+        # Convert single IPv6 address to /64 network
+        if ':' in ip:
+            addr = ipaddress.ip_address(ip)
+            if addr.version == 6:
+                network = ipaddress.ip_interface(f"{ip}/64").network
+                return str(network)
+        # Return IPv4 addresses unchanged
+        return ip
+    except ValueError:
+        # If conversion fails, return original
+        return ip
 
 def fetch_bing_ips() -> List[Tuple[str, str]]:
     """Fetch Bing bot IPs from official source"""
@@ -13,7 +33,7 @@ def fetch_bing_ips() -> List[Tuple[str, str]]:
         if 'ipv4Prefix' in prefix:
             ips.append((prefix['ipv4Prefix'], 'Bingbot'))
         elif 'ipv6Prefix' in prefix:
-            ips.append((prefix['ipv6Prefix'], 'Bingbot'))
+            ips.append((convert_ipv6_to_cidr(prefix['ipv6Prefix']), 'Bingbot'))
     return ips
 
 def fetch_google_ips() -> List[Tuple[str, str]]:
@@ -26,7 +46,7 @@ def fetch_google_ips() -> List[Tuple[str, str]]:
         if 'ipv4Prefix' in prefix:
             ips.append((prefix['ipv4Prefix'], 'googlecrawler'))
         elif 'ipv6Prefix' in prefix:
-            ips.append((prefix['ipv6Prefix'], 'googlecrawler'))
+            ips.append((convert_ipv6_to_cidr(prefix['ipv6Prefix']), 'googlecrawler'))
     return ips
 
 def fetch_uptimerobot_ips() -> List[Tuple[str, str]]:
@@ -34,8 +54,16 @@ def fetch_uptimerobot_ips() -> List[Tuple[str, str]]:
     response = requests.get('https://uptimerobot.com/inc/files/ips/IPv4andIPv6.txt', timeout=30)
     # Split by whitespace and filter out empty strings
     ips = [ip.strip() for ip in response.text.split() if ip.strip()]
-    # Convert to list of tuples with name
-    return [(ip, 'uptimerobot') for ip in ips]
+    # Convert IPv6 addresses to /64 CIDR and create tuples with name
+    processed_ips = [(convert_ipv6_to_cidr(ip), 'uptimerobot') for ip in ips]
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_ips = []
+    for ip, name in processed_ips:
+        if ip not in seen:
+            seen.add(ip)
+            unique_ips.append((ip, name))
+    return unique_ips
 
 def write_csv(data: List[Tuple[str, str]], output_file: str):
     """Write data to CSV file in format: ip_address,name"""

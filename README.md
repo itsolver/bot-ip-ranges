@@ -36,10 +36,11 @@ This will create/update CSV files containing the latest IP ranges for each servi
 - googlecrawlers.csv
 - uptimerobots.csv
 
-Each CSV file contains three columns:
-- type (IPv4 or IPv6)
-- prefix (the IP range)
-- name (the bot service name)
+Each CSV file contains two columns:
+- IP range (IPv4 or IPv6)
+- Bot service name
+
+**Note:** For Cloudflare compatibility, all IPv6 addresses are converted to /64 CIDR notation. This is required because Cloudflare's IP list import does not support individual IPv6 addresses and requires /64 CIDR blocks instead.
 
 ## Data Sources
 
