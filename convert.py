@@ -38,15 +38,11 @@ def fetch_uptimerobot_ips() -> List[Tuple[str, str]]:
     return [(ip, 'uptimerobot') for ip in ips]
 
 def write_csv(data: List[Tuple[str, str]], output_file: str):
-    """Write data to CSV file with type detection"""
+    """Write data to CSV file in format: ip_address,name"""
     with open(output_file, 'w', newline='', encoding='utf-8') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(['type', 'prefix', 'name'])
-
         for ip, name in data:
-            # Determine if IPv4 or IPv6 based on presence of ':'
-            ip_type = 'IPv6' if ':' in ip else 'IPv4'
-            writer.writerow([ip_type, ip, name])
+            writer.writerow([ip, name])
 
 def main():
     """Execute the IP range fetching and CSV conversion process."""
